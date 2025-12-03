@@ -1,6 +1,9 @@
 import { useState, useEffect, useRef } from 'react';
 import './App.css';
 
+// "Ping"音のBase64
+const SOUND_OBSERVE = "data:audio/wav;base64,UklGRl9vT1BXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YU";
+
 function App() {
   // アプリの状態
   // 'idle': 待機中, 'observing': 見る時間, 'drawing': 描く時間, 'paused': 一時停止
@@ -17,11 +20,27 @@ function App() {
   // 画像管理
   const [imageSrc, setImageSrc] = useState(null);
 
-  // 音（オプション：切り替え時に音を鳴らすなら使う）
-  // const audioRef = useRef(null);
+  // 音声オブジェクトの作成
+  const audioObserveRef = useRef(new Audio('https://assets.mixkit.co/active_storage/sfx/2568/2568-preview.mp3')); // ポーン（通知音）
+  const audioDrawRef = useRef(new Audio('https://assets.mixkit.co/active_storage/sfx/2571/2571-preview.mp3'));    // カチッ（スイッチ音）
+
+  // 音量を少し下げる
+  useEffect(() => {
+    audioObserveRef.current.volume = 0.5;
+    audioDrawRef.current.volume = 0.5;
+  }, []);
 
   useEffect(() => {
     let interval = null;
+
+    // フェーズが切り替わった瞬間に音を鳴らす
+    if (phase === 'observing') {
+      audioObserveRef.current.currentTime = 0;
+      audioObserveRef.current.play().catch(e => console.log("Audio play failed", e));
+    } else if (phase === 'drawing') {
+      audioDrawRef.current.currentTime = 0;
+      audioDrawRef.current.play().catch(e => console.log("Audio play failed", e));
+    }
 
     // タイマーが動く条件：フェーズが「見る」か「描く」の時
     if (phase === 'observing' || phase === 'drawing') {
@@ -93,31 +112,41 @@ function App() {
       {/* 待機画面（設定画面） */}
       {phase === 'idle' && (
         <div className="setup-box">
-          <h1>瞬間記憶模写</h1>
-          <p>画像を脳に焼き付けてから描くトレーニング</p>
+          <h1 className="title">瞬間記憶模写</h1>
+          <p className="subtitle">画像を脳に焼き付けてから描くトレーニング</p>
 
-          <div className="input-group">
-            <label>
-              画像を選択:
-              <input type="file" accept="image/*" onChange={handleFileChange} />
-            </label>
+          <div className="input-area">
+            <div className="file-input-wrapper">
+              <label className="file-label">
+                画像を選択
+                <input type="file" accept="image/*" onChange={handleFileChange} className="hidden-input" />
+              </label>
+              <span className="file-name">{imageSrc ? "画像選択済み" : "未選択"}</span>
+            </div>
+
+            <div className="time-settings">
+              <div className="time-input">
+                <label>見る時間</label>
+                <div className="input-row">
+                  <input type="number" value={observeTime} onChange={(e) => setObserveTime(Number(e.target.value))} />
+                  <span>秒</span>
+                </div>
+              </div>
+              <div className="time-input">
+                <label>描く時間</label>
+                <div className="input-row">
+                  <input type="number" value={drawTime} onChange={(e) => setDrawTime(Number(e.target.value))} />
+                  <span>秒</span>
+                </div>
+              </div>
+            </div>
           </div>
 
-          <div className="input-group">
-            <label>見る時間（秒）:
-              <input type="number" value={observeTime} onChange={(e) => setObserveTime(Number(e.target.value))} />
-            </label>
-            <label>描く時間（秒）:
-              <input type="number" value={drawTime} onChange={(e) => setDrawTime(Number(e.target.value))} />
-            </label>
-          </div>
-
-          <button className="start-btn" onClick={handleStart}>スタート</button>
+          <button className="start-btn" onClick={handleStart}>START</button>
 
           {imageSrc && (
             <div className="preview">
-              <p>選択中の画像:</p>
-              <img src={imageSrc} alt="Preview" width="200" />
+              <img src={imageSrc} alt="Preview" />
             </div>
           )}
         </div>
@@ -127,23 +156,28 @@ function App() {
       {phase !== 'idle' && (
         <div className="training-view" onClick={togglePause}>
 
-          {/* ポーズ中のオーバーレイ */}
           {phase === 'paused' && (
             <div className="overlay">
-              <h2>一時停止中</h2>
-              <p>画面タップで再開</p>
-              <button onClick={(e) => { e.stopPropagation(); reset(); }}>終了して設定に戻る</button>
+              <h2>PAUSED</h2>
+              <p>タップして再開</p>
+              <button onClick={(e) => { e.stopPropagation(); reset(); }} className="exit-btn">終了する</button>
             </div>
           )}
 
-          <div className="status-bar">
-            {phase === 'observing' && <span className="status-text observing">👀 よく見て記憶してください！</span>}
-            {phase === 'drawing' && <span className="status-text drawing">✏️ 思い出して描いて！</span>}
-            <span className="timer">{timeLeft}秒</span>
+          {/* ステータスバー（ここを絶対配置ではなくフレックス配置にします） */}
+          <div className={`status-bar ${phase === 'drawing' ? 'bar-drawing' : 'bar-observing'}`}>
+            <div className="status-message">
+              {phase === 'observing' && <span>👁️ よく見て記憶してください</span>}
+              {phase === 'drawing' && <span>✏️ 思い出して描いてください</span>}
+            </div>
+            <div className="timer-display">
+              <span className="timer-count">{timeLeft}</span>
+              <span className="timer-unit">sec</span>
+            </div>
           </div>
 
+          {/* 画像表示エリア */}
           <div className="image-container">
-            {/* 描く時間（drawing）のときは画像を隠す（黒で覆う） */}
             {phase === 'drawing' && <div className="blindfold"></div>}
             <img src={imageSrc} alt="Model" className="model-image" />
           </div>

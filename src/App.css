@@ -1,136 +1,287 @@
-/* 全体のリセット */
+/* Google Fontsのインポート */
+@import url('https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;700&family=Roboto+Mono:wght@500&display=swap');
+
 :root {
-  font-family: Inter, system-ui, Avenir, Helvetica, Arial, sans-serif;
-  line-height: 1.5;
-  font-weight: 400;
-  color-scheme: light dark;
-  color: rgba(255, 255, 255, 0.87);
-  background-color: #242424;
+  --bg-color: #121212;
+  --surface-color: #1e1e1e;
+  --primary-color: #818cf8;
+  /* 淡い紫 */
+  --accent-observe: #34d399;
+  /* エメラルドグリーン */
+  --accent-drawing: #f87171;
+  /* サーモンピンク */
+  --text-main: #f3f4f6;
+  --text-muted: #9ca3af;
+
+  font-family: 'Noto Sans JP', sans-serif;
+  color: var(--text-main);
+  background-color: var(--bg-color);
 }
 
 body {
   margin: 0;
-  display: flex;
-  place-items: center;
-  min-width: 320px;
-  min-height: 100vh;
-}
-
-#root {
-  width: 100%;
+  padding: 0;
+  width: 100vw;
   height: 100vh;
-  text-align: center;
+  overflow: hidden;
+  /* スクロール防止 */
 }
 
-/* コンテナ */
+/* アプリ全体 */
 .app-container {
   width: 100%;
   height: 100%;
   display: flex;
-  flex-direction: column;
   justify-content: center;
   align-items: center;
 }
 
-/* 設定画面 */
+/* --- 設定画面（UI改善） --- */
 .setup-box {
-  background: #333;
-  padding: 2rem;
-  border-radius: 12px;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
-  max-width: 500px;
+  background: var(--surface-color);
+  padding: 2.5rem;
+  border-radius: 16px;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5);
   width: 90%;
-}
-
-.input-group {
-  margin: 1rem 0;
+  max-width: 450px;
   display: flex;
   flex-direction: column;
-  gap: 10px;
-  text-align: left;
+  gap: 1.5rem;
 }
 
-input[type="number"] {
-  padding: 8px;
-  font-size: 1.2rem;
-  width: 80px;
-  margin-left: 10px;
-}
-
-.start-btn {
+.title {
   font-size: 1.5rem;
-  padding: 10px 30px;
-  background-color: #646cff;
-  color: white;
-  border: none;
+  margin: 0;
+  text-align: center;
+  color: var(--primary-color);
+}
+
+.subtitle {
+  font-size: 0.9rem;
+  color: var(--text-muted);
+  text-align: center;
+  margin-top: -10px;
+}
+
+.input-area {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+/* カスタムファイル入力 */
+.file-input-wrapper {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.file-label {
+  background: #374151;
+  padding: 10px 20px;
   border-radius: 8px;
   cursor: pointer;
-  margin-top: 20px;
+  transition: background 0.2s;
+  font-weight: bold;
+  font-size: 0.9rem;
 }
 
-/* トレーニング画面 */
-.training-view {
-  width: 100%;
-  height: 100%;
-  position: relative;
-  background-color: #1a1a1a;
+.file-label:hover {
+  background: #4b5563;
+}
+
+.hidden-input {
+  display: none;
+}
+
+.file-name {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+}
+
+/* 時間設定 */
+.time-settings {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.time-input {
+  flex: 1;
   display: flex;
   flex-direction: column;
-  overflow: hidden;
-  cursor: pointer;
-  /* タップできることを示唆 */
+  gap: 0.5rem;
 }
 
-.status-bar {
-  position: absolute;
-  top: 0;
-  left: 0;
+.time-input label {
+  font-size: 0.85rem;
+  color: var(--text-muted);
+}
+
+.input-row {
+  display: flex;
+  align-items: center;
+  background: #2d2d2d;
+  border-radius: 8px;
+  padding: 5px 10px;
+}
+
+.input-row input {
+  background: transparent;
+  border: none;
+  color: white;
   width: 100%;
-  padding: 10px;
-  background: rgba(0, 0, 0, 0.7);
+  font-size: 1.2rem;
+  text-align: right;
+  font-family: 'Roboto Mono', monospace;
+}
+
+.input-row input:focus {
+  outline: none;
+}
+
+.input-row span {
+  margin-left: 5px;
+  font-size: 0.8rem;
+  color: var(--text-muted);
+}
+
+/* スタートボタン */
+.start-btn {
+  background: linear-gradient(135deg, #6366f1, #8b5cf6);
+  color: white;
+  border: none;
+  padding: 15px;
+  border-radius: 50px;
+  font-size: 1.1rem;
+  font-weight: bold;
+  cursor: pointer;
+  transition: transform 0.1s;
+  letter-spacing: 1px;
+}
+
+.start-btn:active {
+  transform: scale(0.98);
+}
+
+.preview {
+  display: flex;
+  justify-content: center;
+  margin-top: 10px;
+}
+
+.preview img {
+  max-height: 100px;
+  border-radius: 8px;
+  opacity: 0.7;
+}
+
+/* --- トレーニング画面（レイアウト修正・デザイン改善） --- */
+.training-view {
+  width: 100%;
+  height: 100vh;
+  /* 画面いっぱいに */
+  display: flex;
+  flex-direction: column;
+  /* 縦並びにする（重要） */
+  background-color: var(--bg-color);
+  overflow: hidden;
+}
+
+/* ステータスバー（上部） */
+.status-bar {
+  flex-shrink: 0;
+  /* 縮ませない */
+  padding: 15px 20px;
   display: flex;
   justify-content: space-between;
   align-items: center;
+  transition: background-color 0.3s;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
   z-index: 10;
-  font-size: 1.5rem;
+}
+
+.bar-observing {
+  background-color: #064e3b;
+  /* 暗い緑 */
+  border-bottom: 2px solid var(--accent-observe);
+}
+
+.bar-drawing {
+  background-color: #450a0a;
+  /* 暗い赤 */
+  border-bottom: 2px solid var(--accent-drawing);
+}
+
+.status-message {
+  font-size: 1.2rem;
   font-weight: bold;
-}
-
-.observing {
-  color: #4ade80;
-}
-
-/* 緑 */
-.drawing {
-  color: #f87171;
-}
-
-/* 赤 */
-
-.image-container {
-  flex: 1;
   display: flex;
-  justify-content: center;
   align-items: center;
+}
+
+.bar-observing .status-message {
+  color: var(--accent-observe);
+}
+
+.bar-drawing .status-message {
+  color: var(--accent-drawing);
+}
+
+/* タイマー表示 */
+.timer-display {
+  display: flex;
+  align-items: baseline;
+  gap: 5px;
+}
+
+.timer-count {
+  font-family: 'Roboto Mono', monospace;
+  font-size: 2rem;
+  font-weight: 500;
+  color: white;
+  min-width: 3ch;
+  /* 幅を固定してガタツキ防止 */
+  text-align: right;
+}
+
+.timer-unit {
+  font-size: 0.9rem;
+  color: rgba(255, 255, 255, 0.6);
+}
+
+/* 画像エリア */
+.image-container {
+  flex-grow: 1;
+  /* 残りのスペースを埋める */
   position: relative;
   width: 100%;
   height: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  overflow: hidden;
+  padding: 20px;
+  /* 余白を持たせる */
+  box-sizing: border-box;
 }
 
 .model-image {
   max-width: 100%;
   max-height: 100%;
   object-fit: contain;
+  /* アスペクト比を維持して収める */
+  border-radius: 4px;
 }
 
-/* 目隠し（描く時間の黒塗り） */
 .blindfold {
   position: absolute;
   top: 0;
   left: 0;
   width: 100%;
   height: 100%;
-  background-color: black;
+  background-color: #000;
   z-index: 5;
 }
 
@@ -141,10 +292,32 @@ input[type="number"] {
   left: 0;
   width: 100%;
   height: 100%;
-  background: rgba(0, 0, 0, 0.8);
-  z-index: 20;
+  background: rgba(0, 0, 0, 0.85);
+  backdrop-filter: blur(5px);
+  z-index: 100;
   display: flex;
   flex-direction: column;
   justify-content: center;
   align-items: center;
+  gap: 20px;
+}
+
+.overlay h2 {
+  font-size: 2rem;
+  letter-spacing: 5px;
+  color: white;
+}
+
+.exit-btn {
+  background: transparent;
+  border: 1px solid #ef4444;
+  color: #ef4444;
+  padding: 10px 20px;
+  border-radius: 30px;
+  cursor: pointer;
+}
+
+.exit-btn:hover {
+  background: #ef4444;
+  color: white;
 }
