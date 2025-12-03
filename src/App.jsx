@@ -1,55 +1,93 @@
 import { useState, useEffect, useRef } from 'react';
 import './App.css';
 
-// "Ping"音のBase64
-const SOUND_OBSERVE = "data:audio/wav;base64,UklGRl9vT1BXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YU";
+// Web Audio APIコンテキストの管理
+// ブラウザによってプレフィックスが違うため対応
+const AudioContext = window.AudioContext || window.webkitAudioContext;
 
 function App() {
-  // アプリの状態
-  // 'idle': 待機中, 'observing': 見る時間, 'drawing': 描く時間, 'paused': 一時停止
   const [phase, setPhase] = useState('idle');
-  const [prevPhase, setPrevPhase] = useState(null); // ポーズ前の状態を記憶
-
-  // 設定時間（秒）
+  const [prevPhase, setPrevPhase] = useState(null);
   const [observeTime, setObserveTime] = useState(30);
   const [drawTime, setDrawTime] = useState(60);
-
-  // タイマー
   const [timeLeft, setTimeLeft] = useState(0);
-
-  // 画像管理
   const [imageSrc, setImageSrc] = useState(null);
 
-  // 音声オブジェクトの作成
-  const audioObserveRef = useRef(new Audio('https://assets.mixkit.co/active_storage/sfx/2568/2568-preview.mp3')); // ポーン（通知音）
-  const audioDrawRef = useRef(new Audio('https://assets.mixkit.co/active_storage/sfx/2571/2571-preview.mp3'));    // カチッ（スイッチ音）
+  // 音声コンテキスト（スピーカーへのパイプラインのようなもの）
+  const audioCtxRef = useRef(null);
+  // 読み込んだ音データを保存しておく場所（バッファ）
+  const audioBuffersRef = useRef({ observe: null, draw: null });
 
-  // 音量を少し下げる
+  // 1. アプリ起動時に音声コンテキストを準備し、音源をロードする
   useEffect(() => {
-    audioObserveRef.current.volume = 0.5;
-    audioDrawRef.current.volume = 0.5;
+    // コンテキストの作成
+    const ctx = new AudioContext();
+    audioCtxRef.current = ctx;
+
+    // 音源のURL
+    const soundObserveUrl = 'https://assets.mixkit.co/active_storage/sfx/2568/2568-preview.mp3';
+    const soundDrawUrl = 'https://assets.mixkit.co/active_storage/sfx/2571/2571-preview.mp3';
+
+    // 音源をダウンロードしてデコード（使える状態にする）関数
+    const loadSound = async (url, key) => {
+      try {
+        const response = await fetch(url);
+        const arrayBuffer = await response.arrayBuffer();
+        const decodedBuffer = await ctx.decodeAudioData(arrayBuffer);
+        audioBuffersRef.current[key] = decodedBuffer;
+      } catch (e) {
+        console.error("音源の読み込みに失敗:", e);
+      }
+    };
+
+    loadSound(soundObserveUrl, 'observe');
+    loadSound(soundDrawUrl, 'draw');
+
+    // クリーンアップ
+    return () => {
+      ctx.close();
+    };
   }, []);
 
+  // 2. 音を鳴らす関数
+  const playSound = (key) => {
+    const ctx = audioCtxRef.current;
+    const buffer = audioBuffersRef.current[key];
+
+    if (ctx && buffer) {
+      // 音の「発生源」を作る
+      const source = ctx.createBufferSource();
+      source.buffer = buffer;
+
+      // 音量調整用のノードを作る
+      const gainNode = ctx.createGain();
+      gainNode.gain.value = 0.5; // 音量50%
+
+      // 発生源 -> 音量 -> 出力(スピーカー) と繋ぐ
+      source.connect(gainNode);
+      gainNode.connect(ctx.destination);
+
+      // 再生！
+      source.start(0);
+    }
+  };
+
+  // 3. タイマー処理（変更なし）
   useEffect(() => {
     let interval = null;
 
-    // フェーズが切り替わった瞬間に音を鳴らす
     if (phase === 'observing') {
-      audioObserveRef.current.currentTime = 0;
-      audioObserveRef.current.play().catch(e => console.log("Audio play failed", e));
+      playSound('observe'); // 見るフェーズの音
     } else if (phase === 'drawing') {
-      audioDrawRef.current.currentTime = 0;
-      audioDrawRef.current.play().catch(e => console.log("Audio play failed", e));
+      playSound('draw');    // 描くフェーズの音
     }
 
-    // タイマーが動く条件：フェーズが「見る」か「描く」の時
     if (phase === 'observing' || phase === 'drawing') {
       interval = setInterval(() => {
         setTimeLeft((prev) => {
           if (prev <= 1) {
-            // 時間切れ -> フェーズ切り替え
             switchPhase();
-            return 0; // 一瞬0になるがすぐ上書きされる
+            return 0;
           }
           return prev - 1;
         });
@@ -57,37 +95,47 @@ function App() {
     } else {
       clearInterval(interval);
     }
-
     return () => clearInterval(interval);
   }, [phase]);
 
   const switchPhase = () => {
     if (phase === 'observing') {
-      // 見る -> 描く
       setPhase('drawing');
       setTimeLeft(drawTime);
     } else if (phase === 'drawing') {
-      // 描く -> 見る
       setPhase('observing');
       setTimeLeft(observeTime);
     }
   };
 
+  // ★ここが一番重要です★
+  // ユーザーが最初に「START」を押した瞬間に、ブラウザの音声ロックを解除します
   const handleStart = () => {
     if (!imageSrc) {
       alert("まずは画像を選択してください！");
       return;
     }
-    setPhase('observing');
-    setTimeLeft(observeTime);
+
+    const ctx = audioCtxRef.current;
+
+    // コンテキストが「一時停止(suspended)」状態なら「再開(resume)」させる
+    // これが「ユーザーの意思による再生」とみなされ、以降の自動再生が許可されます
+    if (ctx && ctx.state === 'suspended') {
+      ctx.resume().then(() => {
+        console.log("AudioContext resumed successfully");
+        setPhase('observing');
+        setTimeLeft(observeTime);
+      });
+    } else {
+      setPhase('observing');
+      setTimeLeft(observeTime);
+    }
   };
 
   const togglePause = () => {
     if (phase === 'paused') {
-      // 再開
       setPhase(prevPhase);
     } else if (phase === 'observing' || phase === 'drawing') {
-      // 一時停止
       setPrevPhase(phase);
       setPhase('paused');
     }
@@ -96,7 +144,6 @@ function App() {
   const handleFileChange = (e) => {
     const file = e.target.files[0];
     if (file) {
-      // ブラウザ内で完結するURLを生成（サーバーにはアップされません）
       const url = URL.createObjectURL(file);
       setImageSrc(url);
     }
@@ -107,9 +154,9 @@ function App() {
     setTimeLeft(0);
   };
 
+  // UI部分は変更ありません
   return (
     <div className={`app-container ${phase}`}>
-      {/* 待機画面（設定画面） */}
       {phase === 'idle' && (
         <div className="setup-box">
           <h1 className="title">瞬間記憶模写</h1>
@@ -152,10 +199,8 @@ function App() {
         </div>
       )}
 
-      {/* トレーニング中の画面 */}
       {phase !== 'idle' && (
         <div className="training-view" onClick={togglePause}>
-
           {phase === 'paused' && (
             <div className="overlay">
               <h2>PAUSED</h2>
@@ -164,7 +209,6 @@ function App() {
             </div>
           )}
 
-          {/* ステータスバー（ここを絶対配置ではなくフレックス配置にします） */}
           <div className={`status-bar ${phase === 'drawing' ? 'bar-drawing' : 'bar-observing'}`}>
             <div className="status-message">
               {phase === 'observing' && <span>👁️ よく見て記憶してください</span>}
@@ -176,7 +220,6 @@ function App() {
             </div>
           </div>
 
-          {/* 画像表示エリア */}
           <div className="image-container">
             {phase === 'drawing' && <div className="blindfold"></div>}
             <img src={imageSrc} alt="Model" className="model-image" />

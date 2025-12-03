@@ -1,6 +1,20 @@
 /* Google Fontsのインポート */
 @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;700&family=Roboto+Mono:wght@500&display=swap');
 
+/* Reactのルート要素（#root）が画面いっぱいに広がるように強制的にリセットする */
+#root {
+  width: 100%;
+  height: 100%;
+  max-width: none;
+  /* 幅の制限（1280pxなど）を解除 */
+  margin: 0;
+  /* 余計なマージンを削除 */
+  padding: 0;
+  /* 余計なパディングを削除 */
+  text-align: left;
+  /* デフォルトの中央揃えを解除 */
+}
+
 :root {
   --bg-color: #121212;
   --surface-color: #1e1e1e;
